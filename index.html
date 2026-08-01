@@ -390,6 +390,12 @@
   <div class="wrap" id="sumWrap"></div>
   <div class="note" id="sumNote"></div>
   <button class="close" id="sumClose">閉じる</button>
+  <div id="resetArea">
+    <div class="grp">次の試合に向けて</div>
+    <button class="danger" id="rClear">今日の球数を0に戻す</button>
+    <button class="danger" id="rWipe">投手をすべて削除する</button>
+    <p class="note" id="resetNote">球数だけ0に戻す場合、投手の登録と過去の日の記録は残ります。</p>
+  </div>
 </div>
 
 <div class="sheet" id="fsheet">
@@ -661,6 +667,7 @@ function openSummary(){
 function renderSummary(){
   const ds=dataDates(),idx=ds.indexOf(sumDate);
   $('sumDate').textContent=keyLabel(sumDate)+(sumDate===dkey(0)?' 今日':'');
+  $('resetArea').classList.toggle('hide',sumDate!==dkey(0));
   $('sumPrev').disabled=idx<=0;$('sumNext').disabled=idx<0||idx>=ds.length-1;
 
   const rows=P.list.filter(p=>dayTotal(p,sumDate)>0);
@@ -722,6 +729,23 @@ $('sumCopy').onclick=()=>{navigator.clipboard?.writeText(summaryText())
   .then(()=>toast('コピーしました'),()=>toast('コピーできませんでした'));};
 $('sumClose').onclick=closeSheets;
 $('pList').onclick=openSummary;
+
+/* 2度押しの確認つきボタン */
+function arm(btn,label,run){
+  let on=false,tm=null;
+  btn.onclick=()=>{
+    if(!on){on=true;btn.classList.add('armed');btn.textContent='もう一度押すと実行';
+      clearTimeout(tm);tm=setTimeout(()=>{on=false;btn.classList.remove('armed');btn.textContent=label;},3500);}
+    else{clearTimeout(tm);on=false;btn.classList.remove('armed');btn.textContent=label;run();}
+  };
+}
+arm($('rClear'),'今日の球数を0に戻す',()=>{
+  P.list.forEach(p=>{delete p.days[dkey(0)];p.stack=[];});
+  P.inning=1;savePitch();renderP();renderSummary();toast('今日の球数を0に戻しました');
+});
+arm($('rWipe'),'投手をすべて削除する',()=>{
+  P={list:[],sel:null,inning:1};savePitch();renderP();closeSheets();toast('投手をすべて削除しました');
+});
 
 /* pitcher sheet */
 function openPitcher(id){
